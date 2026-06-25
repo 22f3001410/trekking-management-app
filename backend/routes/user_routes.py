@@ -1,8 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models.tables import db, AppUser, TrekRoute, TrekBooking
 from routes.auth_routes import get_current_user
-import csv
-import io
 
 user_bp = Blueprint("user_bp", __name__)
 
@@ -161,28 +159,29 @@ def export_history():
     if resp:
         return resp, code
 
-    bookings = TrekBooking.query.filter_by(user_id=user.uid).all()
+    from workers.tasks import export_user_csv
+    job = export_user_csv.delay(user.uid)
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Booking ID", "Trek Name", "Location", "Start Date", "End Date", "Booking Status", "Booked On"])
+    return jsonify({
+        "message": "Export started. Your file will be ready shortly.",
+        "task_id": job.id
+    }), 202
 
-    for b in bookings:
-        trek = TrekRoute.query.get(b.trek_id)
-        writer.writerow([
-            b.booking_id,
-            trek.trek_name if trek else "",
-            trek.location if trek else "",
-            str(trek.start_date) if trek else "",
-            str(trek.end_date) if trek else "",
-            b.booking_status,
-            b.booked_on.strftime("%Y-%m-%d")
-        ])
 
-    output.seek(0)
-    from flask import Response
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=trekking_history.csv"}
-    )
+@user_bp.route("/history/export/status/<task_id>", methods=["GET"])
+def export_status(task_id):
+    user, resp, code = require_trekker()
+    if resp:
+        return resp, code
+
+    from workers.tasks import celery
+    job = celery.AsyncResult(task_id)
+
+    if job.state == "PENDING":
+        return jsonify({"status": "pending"}), 202
+    elif job.state == "SUCCESS":
+        return jsonify({"status": "ready", "file_path": job.result}), 200
+    elif job.state == "FAILURE":
+        return jsonify({"status": "failed"}), 500
+    else:
+        return jsonify({"status": job.state.lower()}), 202

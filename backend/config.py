@@ -8,8 +8,8 @@ class AppConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     REDIS_URL = os.environ.get("REDIS_URL") or "redis://localhost:6379/0"
-    CELERY_BROKER_URL = REDIS_URL
-    CELERY_RESULT_BACKEND = REDIS_URL
+    broker_url = REDIS_URL
+    result_backend = REDIS_URL
 
     CACHE_TYPE = "RedisCache"
     CACHE_REDIS_URL = REDIS_URL
