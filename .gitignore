@@ -4,3 +4,7 @@ __pycache__/
 *.db
 .env
 instance/
+backend/exports/
+backend/celerybeat-schedule
+backend/celerybeat-schedule-shm
+backend/celerybeat-schedule-wal
