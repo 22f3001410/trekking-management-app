@@ -51,9 +51,9 @@ def dispatch_reminders():
     cutoff_end = datetime.utcnow() + timedelta(hours=48)
 
     upcoming = TrekBooking.query.join(TrekRoute).filter(
-        TrekRoute.scheduled_date >= cutoff_start.date(),
-        TrekRoute.scheduled_date <= cutoff_end.date(),
-        TrekBooking.booking_status == "confirmed"
+        TrekRoute.start_date >= cutoff_start.date(),
+        TrekRoute.start_date <= cutoff_end.date(),
+        TrekBooking.booking_status == "Booked"
     ).all()
 
     for entry in upcoming:
@@ -62,14 +62,14 @@ def dispatch_reminders():
         if participant and trek:
             mail_body = (
                 f"Hello {participant.full_name},\n\n"
-                f"This is a reminder that your trek '{trek.route_name}' "
-                f"is scheduled on {trek.scheduled_date}.\n\n"
+                f"This is a reminder that your trek '{trek.trek_name}' "
+                f"is scheduled on {trek.start_date}.\n\n"
                 f"Meeting point: {trek.meeting_point}\n"
-                f"Difficulty: {trek.difficulty_level}\n\n"
+                f"Difficulty: {trek.difficulty}\n\n"
                 f"Stay prepared and have a great trek!\n\nTrekking App Team"
             )
             msg = Message(
-                subject=f"Reminder: {trek.route_name} is tomorrow!",
+                subject=f"Reminder: {trek.trek_name} is tomorrow!",
                 recipients=[participant.email_addr],
                 body=mail_body
             )
@@ -89,13 +89,13 @@ def compile_monthly_report():
     last_month_start = last_month_end.replace(day=1, hour=0, minute=0, second=0)
 
     bookings = TrekBooking.query.filter(
-        TrekBooking.booked_at >= last_month_start,
-        TrekBooking.booked_at <= last_month_end
+        TrekBooking.booked_on >= last_month_start,
+        TrekBooking.booked_on <= last_month_end
     ).all()
 
     total_bookings = len(bookings)
-    confirmed = sum(1 for b in bookings if b.booking_status == "confirmed")
-    cancelled = sum(1 for b in bookings if b.booking_status == "cancelled")
+    confirmed = sum(1 for b in bookings if b.booking_status == "Booked")
+    cancelled = sum(1 for b in bookings if b.booking_status == "Cancelled")
 
     trek_counts = {}
     for b in bookings:
@@ -106,7 +106,7 @@ def compile_monthly_report():
         top_id = max(trek_counts, key=trek_counts.get)
         route = TrekRoute.query.get(top_id)
         if route:
-            popular_trek_name = route.route_name
+            popular_trek_name = route.trek_name
 
     report_lines = (
         f"Monthly Trekking Report — {last_month_start.strftime('%B %Y')}\n"
@@ -144,11 +144,11 @@ def export_user_csv(requesting_user_id):
         for row in rows:
             trek = TrekRoute.query.get(row.trek_id)
             writer.writerow([
-                row.id,
-                trek.route_name if trek else "Unknown",
-                trek.scheduled_date if trek else "N/A",
+                row.booking_id,
+                trek.trek_name if trek else "Unknown",
+                trek.start_date if trek else "N/A",
                 row.booking_status,
-                row.booked_at.strftime("%Y-%m-%d %H:%M")
+                row.booked_on.strftime("%Y-%m-%d %H:%M")
             ])
 
     return output_path
