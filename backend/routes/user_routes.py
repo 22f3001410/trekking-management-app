@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from models.tables import db, AppUser, TrekRoute, TrekBooking
 from routes.auth_routes import get_current_user
 
@@ -185,3 +185,16 @@ def export_status(task_id):
         return jsonify({"status": "failed"}), 500
     else:
         return jsonify({"status": job.state.lower()}), 202
+    
+@user_bp.route("/history/export/download/<task_id>", methods=["GET"])
+def download_export(task_id):
+    user, resp, code = require_trekker()
+    if resp:
+        return resp, code
+
+    from workers.tasks import celery
+    job = celery.AsyncResult(task_id)
+    if job.state != "SUCCESS":
+        return jsonify({"error": "File not ready"}), 400
+
+    return send_file(job.result, as_attachment=True, download_name="my_trekking_history.csv")
