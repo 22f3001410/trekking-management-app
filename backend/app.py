@@ -9,7 +9,7 @@ mail = Mail()
 cache = Cache()
 
 def build_app():
-    flask_app = Flask(__name__, static_folder="../../frontend", static_url_path="")
+    flask_app = Flask(__name__, static_folder="../frontend", static_url_path="")
 
     flask_app.config.from_object(AppConfig)
 
