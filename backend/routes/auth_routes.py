@@ -29,9 +29,14 @@ def decode_token(token):
 
 def get_current_user():
     auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    else:
+        token = request.args.get("token", "")
+
+    if not token:
         return None, "No token provided"
-    token = auth_header.split(" ")[1]
+
     payload, err = decode_token(token)
     if err:
         return None, err
