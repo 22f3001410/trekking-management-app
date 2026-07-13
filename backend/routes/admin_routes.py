@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from models.tables import db, AppUser, TrekRoute, StaffProfile, StaffAssignment, TrekBooking
 from routes.auth_routes import get_current_user
 from datetime import datetime
+from app import cache
 
 admin_bp = Blueprint("admin_bp", __name__)
 
@@ -91,6 +92,7 @@ def create_trek():
     )
     db.session.add(new_trek)
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek created", "trek_id": new_trek.trek_id}), 201
 
 
@@ -115,6 +117,7 @@ def edit_trek(trek_id):
         trek.end_date = datetime.strptime(body["end_date"], "%Y-%m-%d").date()
 
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek updated"}), 200
 
 
@@ -127,6 +130,7 @@ def remove_trek(trek_id):
     trek = TrekRoute.query.get_or_404(trek_id)
     db.session.delete(trek)
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Trek removed"}), 200
 
 

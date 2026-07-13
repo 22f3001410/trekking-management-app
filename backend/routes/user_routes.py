@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, send_file
 from models.tables import db, AppUser, TrekRoute, TrekBooking
 from routes.auth_routes import get_current_user
+from app import cache
 
 user_bp = Blueprint("user_bp", __name__)
 
@@ -32,6 +33,7 @@ def user_dashboard():
 
 
 @user_bp.route("/treks", methods=["GET"])
+@cache.cached(timeout=60, query_string=True)
 def browse_treks():
     user, resp, code = require_trekker()
     if resp:
@@ -106,6 +108,7 @@ def book_trek():
     trek.available_slots -= 1
     db.session.add(new_booking)
     db.session.commit()
+    cache.clear()
 
     return jsonify({"message": "Trek booked successfully", "booking_id": new_booking.booking_id}), 201
 
@@ -140,6 +143,7 @@ def cancel_booking(booking_id):
         trek.available_slots += 1
 
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Booking cancelled"}), 200
 
 

@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models.tables import db, AppUser, TrekRoute, StaffProfile, StaffAssignment, TrekBooking
 from routes.auth_routes import get_current_user
+from app import cache
 
 staff_bp = Blueprint("staff_bp", __name__)
 
@@ -86,6 +87,7 @@ def update_slots(trek_id):
         trek.available_slots = new_slots
 
     db.session.commit()
+    cache.clear()
     return jsonify({"message": "Slots updated", "available_slots": trek.available_slots}), 200
 
 
@@ -113,6 +115,7 @@ def update_trek_status(trek_id):
 
     trek.status = new_status
     db.session.commit()
+    cache.clear()
     return jsonify({"message": f"Trek status set to {new_status}"}), 200
 
 
