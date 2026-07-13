@@ -81,7 +81,7 @@ class StaffProfile(db.Model):
     __tablename__ = "staff_profiles"
 
     staff_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("app_users.uid"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("app_users.uid"), unique=True, nullable=False)
     expertise_level = db.Column(db.String(50), nullable=True)
     emergency_contact = db.Column(db.String(15), nullable=True)
     joined_as_staff = db.Column(db.DateTime, default=datetime.utcnow)
