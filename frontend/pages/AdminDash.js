@@ -15,10 +15,10 @@ const AdminDash = {
       editingTrekId: null,
       trekForm: {
         trek_name: '', location: '', difficulty: 'Easy', duration_days: '',
-        total_slots: '', start_date: '', end_date: '', altitude_meters: '', meeting_point: ''
+        total_slots: '', start_date: '', end_date: '', altitude_meters: '', meeting_point: '', status: 'Pending'
       },
       showStaffModal: false,
-      staffForm: { full_name: '', email_addr: '', password: '', phone_no: '', expertise_level: '', emergency_contact: '' },
+      staffForm: { full_name: '', email_addr: '', password: '', phone_no: '', expertise_level: '' },
       showAssignModal: false,
       assignForm: { staff_id: '', trek_id: '' },
       bannerMsg: '',
@@ -44,7 +44,7 @@ const AdminDash = {
       this.activeTab = tabName;
       if (tabName === 'overview') this.loadOverview();
       if (tabName === 'treks') this.loadTreks();
-      if (tabName === 'staff') this.loadStaff();
+      if (tabName === 'staff') { this.loadStaff(); this.loadTreks(); }
       if (tabName === 'users') this.loadUsers();
       if (tabName === 'bookings') this.loadBookings();
       if (tabName === 'reports') this.loadReport();
@@ -75,7 +75,7 @@ const AdminDash = {
     },
     openAddTrekModal() {
       this.editingTrekId = null;
-      this.trekForm = { trek_name: '', location: '', difficulty: 'Easy', duration_days: '', total_slots: '', start_date: '', end_date: '', altitude_meters: '', meeting_point: '' };
+      this.trekForm = { trek_name: '', location: '', difficulty: 'Easy', duration_days: '', total_slots: '', start_date: '', end_date: '', altitude_meters: '', meeting_point: '', status: 'Pending' };
       this.showTrekModal = true;
     },
     openEditTrekModal(trek) {
@@ -84,7 +84,8 @@ const AdminDash = {
         trek_name: trek.trek_name, location: trek.location, difficulty: trek.difficulty,
         duration_days: trek.duration_days, total_slots: trek.total_slots,
         start_date: trek.start_date, end_date: trek.end_date,
-        altitude_meters: trek.altitude_meters || '', meeting_point: trek.meeting_point || ''
+        altitude_meters: trek.altitude_meters || '', meeting_point: trek.meeting_point || '',
+        status: trek.status
       };
       this.showTrekModal = true;
     },
@@ -117,7 +118,7 @@ const AdminDash = {
       this.loadTreks();
     },
     openAddStaffModal() {
-      this.staffForm = { full_name: '', email_addr: '', password: '', phone_no: '', expertise_level: '', emergency_contact: '' };
+      this.staffForm = { full_name: '', email_addr: '', password: '', phone_no: '', expertise_level: '' };
       this.showStaffModal = true;
     },
     async saveStaff() {
@@ -157,6 +158,8 @@ const AdminDash = {
       }
       this.showAssignModal = false;
       this.flashBanner('Staff assigned to trek', 'success');
+      this.loadTreks();
+      this.loadStaff();
     },
     async toggleUser(uid, action) {
       const res = await fetch('/api/admin/users/' + uid + '/toggle-status', {
@@ -170,7 +173,8 @@ const AdminDash = {
         return;
       }
       this.flashBanner(payload.message, 'success');
-      this.loadUsers();
+      if (this.activeTab === 'staff') this.loadStaff();
+      else this.loadUsers();
     },
     doLogout() {
       this.$emit('logout');
@@ -216,7 +220,7 @@ const AdminDash = {
               <tr v-for="t in treksList" :key="t.trek_id">
                 <td>{{ t.trek_name }}</td>
                 <td>{{ t.location }}</td>
-                <td><span :class="['badge-difficulty', 'badge-' + t.difficulty]">{{ t.difficulty }}</span></td>
+                <td><span :class="['badge-difficulty', 'badge-' + t.difficulty]" style="position:static;">{{ t.difficulty }}</span></td>
                 <td>{{ t.available_slots }} / {{ t.total_slots }}</td>
                 <td>{{ t.status }}</td>
                 <td>{{ t.start_date }} → {{ t.end_date }}</td>
@@ -239,14 +243,24 @@ const AdminDash = {
             </div>
           </div>
           <table class="table-st">
-            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Expertise</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Expertise</th><th>Assigned Treks</th><th>Status</th><th></th></tr></thead>
             <tbody>
               <tr v-for="s in staffMembers" :key="s.staff_id">
                 <td>{{ s.full_name }}</td>
                 <td>{{ s.email_addr }}</td>
                 <td>{{ s.phone_no }}</td>
                 <td>{{ s.expertise_level }}</td>
+                <td>
+                  <span v-for="t in treksList.filter(tr => tr.assigned_staff_ids && tr.assigned_staff_ids.includes(s.staff_id))" :key="t.trek_id" style="display:inline-block; background:#E6F1FB; color:#0C447C; border-radius:6px; padding:2px 8px; font-size:12px; margin-right:4px;">{{ t.trek_name }}</span>
+                  <span v-if="!treksList.some(tr => tr.assigned_staff_ids && tr.assigned_staff_ids.includes(s.staff_id))" style="color:#6c757d; font-size:12px;">None</span>
+                </td>
                 <td>{{ s.is_blacklisted ? 'Blacklisted' : (s.is_active ? 'Active' : 'Inactive') }}</td>
+                <td>
+                  <button v-if="s.is_active" class="btn-outline-st" style="width:auto; margin-right:6px;" @click="toggleUser(s.user_id, 'deactivate')">Deactivate</button>
+                  <button v-else class="btn-outline-st" style="width:auto; margin-right:6px;" @click="toggleUser(s.user_id, 'activate')">Activate</button>
+                  <button v-if="!s.is_blacklisted" class="btn-outline-st" style="width:auto; color:#A32D2D; border-color:#A32D2D;" @click="toggleUser(s.user_id, 'blacklist')">Blacklist</button>
+                  <button v-else class="btn-outline-st" style="width:auto;" @click="toggleUser(s.user_id, 'unblacklist')">Unblacklist</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -279,10 +293,11 @@ const AdminDash = {
         <div v-if="activeTab === 'bookings'">
           <div class="section-title">All Bookings</div>
           <table class="table-st">
-            <thead><tr><th>Booking ID</th><th>Trek</th><th>Location</th><th>Booked On</th><th>Status</th><th>Payment</th></tr></thead>
+            <thead><tr><th>Booking ID</th><th>User</th><th>Trek</th><th>Location</th><th>Booked On</th><th>Status</th><th>Payment</th></tr></thead>
             <tbody>
               <tr v-for="b in bookingsData" :key="b.booking_id">
                 <td>{{ b.booking_id }}</td>
+                <td>{{ b.user_name }}</td>
                 <td>{{ b.trek_name }}</td>
                 <td>{{ b.location }}</td>
                 <td>{{ b.booked_on }}</td>
@@ -331,6 +346,14 @@ const AdminDash = {
           <input class="form-input-st" type="date" v-model="trekForm.end_date" />
           <label class="form-label-st">Meeting Point</label>
           <input class="form-input-st" v-model="trekForm.meeting_point" />
+          <label class="form-label-st">Status</label>
+          <select class="form-input-st" v-model="trekForm.status">
+            <option>Pending</option>
+            <option>Approved</option>
+            <option>Open</option>
+            <option>Closed</option>
+            <option>Completed</option>
+          </select>
           <div class="d-flex gap-2">
             <button class="btn-primary-st" @click="saveTrek">Save</button>
             <button class="btn-outline-st" @click="showTrekModal = false">Cancel</button>
@@ -350,9 +373,13 @@ const AdminDash = {
           <label class="form-label-st">Phone</label>
           <input class="form-input-st" v-model="staffForm.phone_no" />
           <label class="form-label-st">Expertise Level</label>
-          <input class="form-input-st" v-model="staffForm.expertise_level" />
-          <label class="form-label-st">Emergency Contact</label>
-          <input class="form-input-st" v-model="staffForm.emergency_contact" />
+          <select class="form-input-st" v-model="staffForm.expertise_level">
+            <option value="">Select expertise</option>
+            <option>Beginner</option>
+            <option>Intermediate</option>
+            <option>Advanced</option>
+            <option>Expert</option>
+          </select>
           <div class="d-flex gap-2">
             <button class="btn-primary-st" @click="saveStaff">Add</button>
             <button class="btn-outline-st" @click="showStaffModal = false">Cancel</button>

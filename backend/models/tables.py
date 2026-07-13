@@ -72,7 +72,8 @@ class TrekRoute(db.Model):
             "end_date": str(self.end_date),
             "status": self.status,
             "altitude_meters": self.altitude_meters,
-            "meeting_point": self.meeting_point
+            "meeting_point": self.meeting_point,
+            "assigned_staff_ids": [a.staff_id for a in self.assigned_staff]
         }
 
 
@@ -132,9 +133,11 @@ class TrekBooking(db.Model):
 
     def to_dict(self):
         trek = TrekRoute.query.get(self.trek_id)
+        user = AppUser.query.get(self.user_id)
         return {
             "booking_id": self.booking_id,
             "user_id": self.user_id,
+            "user_name": user.full_name if user else None,
             "trek_id": self.trek_id,
             "trek_name": trek.trek_name if trek else None,
             "location": trek.location if trek else None,

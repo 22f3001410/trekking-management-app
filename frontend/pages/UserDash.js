@@ -13,7 +13,9 @@ const UserDash = {
       exportTaskId: null,
       exportState: 'idle',
       bannerMsg: '',
-      bannerType: 'success'
+      bannerType: 'success',
+      showProfileModal: false,
+      profileForm: { full_name: '', phone_no: '', new_password: '' }
     };
   },
   created() {
@@ -129,6 +131,30 @@ const UserDash = {
       this.exportState = 'idle';
       this.exportTaskId = null;
     },
+    openProfileModal() {
+      this.profileForm = {
+        full_name: summitAuthStore.fullName || '',
+        phone_no: '',
+        new_password: ''
+      };
+      this.showProfileModal = true;
+    },
+    async saveProfile() {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: this.authHeaders(),
+        body: JSON.stringify(this.profileForm)
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        this.flashBanner(payload.error || 'Could not update profile', 'danger');
+        return;
+      }
+      summitAuthStore.fullName = this.profileForm.full_name;
+      localStorage.setItem('summitTrailsName', this.profileForm.full_name);
+      this.showProfileModal = false;
+      this.flashBanner('Profile updated', 'success');
+    },
     doLogout() {
       this.$emit('logout');
     }
@@ -142,6 +168,7 @@ const UserDash = {
           <a href="#" @click.prevent="switchTab('browse')">Browse Treks</a>
           <a href="#" @click.prevent="switchTab('bookings')">My Bookings</a>
           <a href="#" @click.prevent="switchTab('history')">History</a>
+          <a href="#" @click.prevent="openProfileModal">Edit Profile</a>
           <a href="#" @click.prevent="doLogout">Logout</a>
         </div>
       </div>
@@ -242,6 +269,22 @@ const UserDash = {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div v-if="showProfileModal" class="modal-overlay" @click.self="showProfileModal = false">
+        <div class="modal-box">
+          <h5>Edit Profile</h5>
+          <label class="form-label-st">Full Name</label>
+          <input class="form-input-st" v-model="profileForm.full_name" />
+          <label class="form-label-st">Phone Number</label>
+          <input class="form-input-st" v-model="profileForm.phone_no" placeholder="Leave blank to keep current" />
+          <label class="form-label-st">New Password</label>
+          <input class="form-input-st" type="password" v-model="profileForm.new_password" placeholder="Leave blank to keep current" />
+          <div class="d-flex gap-2">
+            <button class="btn-primary-st" @click="saveProfile">Save</button>
+            <button class="btn-outline-st" @click="showProfileModal = false">Cancel</button>
+          </div>
         </div>
       </div>
     </div>

@@ -42,7 +42,7 @@ def browse_treks():
     duration = request.args.get("duration", "")
     search_q = request.args.get("q", "")
 
-    query = TrekRoute.query.filter_by(status="Open")
+    query = TrekRoute.query.filter(TrekRoute.status.in_(["Open", "Approved"]))
 
     if difficulty:
         query = query.filter(TrekRoute.difficulty == difficulty)

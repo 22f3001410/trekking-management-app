@@ -36,6 +36,11 @@ def build_app():
     def catch_all(path):
         return send_from_directory(flask_app.static_folder, "index.html")
 
+    @flask_app.after_request
+    def stop_caching(response):
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     return flask_app
 
 
