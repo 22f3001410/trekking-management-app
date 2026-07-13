@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from models.tables import db, AppUser, TrekRoute, StaffProfile, StaffAssignment, TrekBooking
 from routes.auth_routes import get_current_user
 from datetime import datetime
-from app import cache
+from extensions import cache
 
 admin_bp = Blueprint("admin_bp", __name__)
 

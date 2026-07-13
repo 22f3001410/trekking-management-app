@@ -1,12 +1,8 @@
 from flask import Flask, send_from_directory
-from flask_mail import Mail
-from flask_caching import Cache
 from config import AppConfig
 from models.tables import db, AppUser
+from extensions import mail, cache
 import os
-
-mail = Mail()
-cache = Cache()
 
 def build_app():
     flask_app = Flask(__name__, static_folder="../frontend", static_url_path="")
